@@ -31,6 +31,12 @@ public class GeodesyFabricMod implements ModInitializer {
 
     static private final Map<UUID, GeodesyCore> perPlayerCore = new HashMap<>();
 
+    /**
+     * Gets the geodesy core, which handles all calculations and farm building,
+     * for a player and creates one if it does not exist.
+     * @param player the player
+     * @return the geodesy core
+     */
     private GeodesyCore getPerPlayerCore(ServerPlayerEntity player) {
         UUID uuid = player.getUuid();
         if (!perPlayerCore.containsKey(uuid)) {
@@ -41,6 +47,9 @@ public class GeodesyFabricMod implements ModInitializer {
         return core;
     }
 
+    /**
+     * Registers all the commands for the mod on initialization.
+     */
     @Override
     public void onInitialize() {
         ArgumentTypeRegistry.registerArgumentType(new Identifier("geodesy", "direction"), DirectionArgumentType.class, ConstantArgumentSerializer.of(DirectionArgumentType::direction));
@@ -170,6 +179,12 @@ public class GeodesyFabricMod implements ModInitializer {
         });
     }
 
+    /**
+     * Execute the geodesy project with a variable number of directions.
+     * @param context the command context
+     * @param argumentIndex the number of directions
+     * @return the command execution result
+     */
     private int geodesyProjectCommand(CommandContext<ServerCommandSource> context, int argumentIndex) {
         try {
             GeodesyCore core = getPerPlayerCore(context.getSource().getPlayer());

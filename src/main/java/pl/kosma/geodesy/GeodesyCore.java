@@ -53,19 +53,32 @@ public class GeodesyCore {
     private World world;
     @Nullable
     private IterableBlockBox geode;
-    // The following list must contain all budding amethyst in the area.
+    /**
+     * List of all budding amethyst blocks in the current selected area.
+     * Must contain all budding amethyst blocks.
+     */
     @Nullable
     private List<BlockPos> buddingAmethystPositions;
+    /**
+     * List of all amethyst cluster blocks in the current selected area.
+     * Must contain all amethyst cluster blocks.
+     */
     @Nullable
-    // The following list must contain all amethyst clusters in the area.
     private List<Pair<BlockPos, Direction>> amethystClusterPositions;
 
+    /**
+     * Introduces the mod and fill the player hotbar with the items for using the mod.
+     */
     public void geodesyGeodesy() {
         sendCommandFeedback("Welcome to Geodesy!");
         sendCommandFeedback("Read the book for all the gory details.");
         fillHotbar();
     }
 
+    /**
+     * Fills the player's hotbar with the items for using the mod.
+     * Replaces existing items.
+     */
     private void fillHotbar() {
         ServerPlayerEntity player = this.player.get();
         if (player == null)
@@ -81,6 +94,14 @@ public class GeodesyCore {
         player.getInventory().setStack(8, Items.POISONOUS_POTATO.getDefaultStack());
     }
 
+    /**
+     * Selects an area for the mod to work on.
+     * Detects geodes in the area, clears the work area, and
+     * record the budding and cluster blocks.
+     * @param world the world
+     * @param startPos the start position
+     * @param endPos the end position
+     */
     void geodesyArea(World world, BlockPos startPos, BlockPos endPos) {
         sendCommandFeedback("---");
 
@@ -95,6 +116,17 @@ public class GeodesyCore {
         }
     }
 
+    /**
+     * Projects the geode in the supplied directions in order.
+     * <p>First, grows all clusters. Then, creates a bounding box made out of moss blocks.
+     * Then, projects the budding blocks and the cluster blocks to the supplied directions.
+     * Budding blocks mean that the block should not have a flying machine, signified with a crying obsidian block on the wall.
+     * Cluster blocks mean that the block should be harvested with a flying machine, signified with a pumpkin block on the wall.
+     * Finally, calculates the efficiencies of the directions.
+     * @param directions the directions to project, in order
+     * @implNote Currently, the harvest-bility of the projected areas are not checked.
+     * Some areas such as 1x1 holes may be unable to be harvested.
+     */
     void geodesyProject(Direction[] directions) {
         // Return if geodesy area has not been run yet.
         if (geode == null || buddingAmethystPositions == null || amethystClusterPositions == null) {
@@ -105,10 +137,10 @@ public class GeodesyCore {
         // Expand the area and clear it out for work purposes.
         this.prepareWorkArea(true);
 
-        // Grow and count all amethyst (for efficiency calculation).
+        // Grow all amethyst (for efficiency calculation).
         this.growClusters();
 
-        // Render a frame.
+        // Make a moss bounding box around the geode.
         IterableBlockBox frameBoundingBox = new IterableBlockBox(geode.expand(WALL_OFFSET));
         frameBoundingBox.forEachEdgePosition(blockPos -> world.setBlockState(blockPos, Blocks.MOSS_BLOCK.getDefaultState(), NOTIFY_LISTENERS));
 
@@ -147,6 +179,11 @@ public class GeodesyCore {
         sendCommandFeedback(" %s: %d%% (%d/%d)", layoutName, (int) efficiency, clustersCollected, amethystClusterPositions.size());
     }
 
+    /**
+     * Analyzes the geode by projecting the geode in all combinations of directions and sends feedback to the player.
+     * Only one of the opposite directions is used.
+     * For example, out of {@link Direction#NORTH} and {@link Direction#SOUTH}, only {@link Direction#SOUTH} is used.
+     */
     public void geodesyAnalyze() {
         sendCommandFeedback("---");
 
@@ -171,6 +208,10 @@ public class GeodesyCore {
         sendCommandFeedback("Now run /geodesy project with your chosen projections.");
     }
 
+    /**
+     * Assembles the flying machines and generates wiring and water collection after the player places the sticky blocks and
+     * the mob heads indicating engines and stopping blocks.
+     */
     void geodesyAssemble() {
         // Return if geodesy area has not been run yet.
         if (geode == null) {
@@ -385,7 +426,7 @@ public class GeodesyCore {
 
     private void buildWalls(IterableBlockBox wallsBox) {
         for (Direction slicingDirection: Direction.values()) {
-            // Top wall (lid) is transparent but we still run the processing
+            // Top wall (lid) is transparent, but we still run the processing
             // to remove all blocks that should be removed.
             BlockState wallBlock = (slicingDirection == Direction.UP) ?
                     Blocks.AIR.getDefaultState() :
@@ -398,6 +439,12 @@ public class GeodesyCore {
         }
     }
 
+    /**
+     * Clears the geode work area.
+     * Places walls around the border of the work area to prevent outside fluids and falling blocks.
+     * Adds a command block to executre the {@link #geodesyArea(World, BlockPos, BlockPos) area command} for this area again.
+     * @param force force run this method again, even if it has already been run.
+     */
     private void prepareWorkArea(boolean force) {
         IterableBlockBox workBoundingBox = new IterableBlockBox(geode.expand(BUILD_MARGIN));
         BlockPos commandBlockPos = new BlockPos(workBoundingBox.getMaxX(), workBoundingBox.getMaxY(), workBoundingBox.getMaxZ());
@@ -420,7 +467,7 @@ public class GeodesyCore {
             world.setBlockState(blockPos, WORK_AREA_WALL.getDefaultState(), NOTIFY_LISTENERS);
         });
 
-        // Add a command block to allow the player to reeexecute the command easily.
+        // Add a command block to allow the player to re-execute the command easily.
         String resumeCommand = String.format("/geodesy area %d %d %d %d %d %d",
                 geode.getMinX(), geode.getMinY(), geode.getMinZ(), geode.getMaxX(), geode.getMaxY(), geode.getMaxZ());
 
@@ -434,6 +481,13 @@ public class GeodesyCore {
         commandBlock.markDirty();
     }
 
+    /**
+     * Detects geodes in the supplied area.
+     * Sets {@link #geode}, {@link #buddingAmethystPositions}, and {@link #amethystClusterPositions}.
+     * Also clears the above fields if no geode is found.
+     * @param pos1 one corner of the area
+     * @param pos2 the other corner of the area
+     */
     private void detectGeode(BlockPos pos1, BlockPos pos2) {
         // Calculate the correct min/max coordinates and construct a box.
         IterableBlockBox scanBox = new IterableBlockBox(new BlockBox(
@@ -479,6 +533,9 @@ public class GeodesyCore {
         geode = new IterableBlockBox(minX.get(), minY.get(), minZ.get(), maxX.get(), maxY.get(), maxZ.get()).expand(1);
     }
 
+    /**
+     * Highlights the geode area.
+     */
     private void highlightGeode() {
         // Highlight the geode area.
         int commandBlockOffset = WALL_OFFSET+1;
@@ -498,7 +555,7 @@ public class GeodesyCore {
     }
 
     /**
-     * Count all possible clusters from each budding block.
+     * Counts all possible clusters from each budding block in {@link #buddingAmethystPositions}.
      */
     private void countClusters() {
         amethystClusterPositions = new ArrayList<>();
@@ -513,7 +570,8 @@ public class GeodesyCore {
     }
 
     /**
-     * Set all the clusters positions to cluster blocks if it is currently air.
+     * Sets all the clusters positions to cluster blocks if it is currently air.
+     * Basically grows all the clusters.
      */
     private void growClusters() {
         amethystClusterPositions.forEach(blockPosDirectionPair -> {
@@ -524,7 +582,7 @@ public class GeodesyCore {
     }
 
     /**
-     * Project the geode to a plane in a direction
+     * Projects the geode to a plane in a direction.
      * Slices with budding amethyst(s) are marked with crying obsidian.
      * Slices with amethyst cluster(s) that needs to be harvested are marked with pumpkin.
      * @param direction The direction to project the geode to.
@@ -555,7 +613,7 @@ public class GeodesyCore {
     }
 
     /**
-     * Get the position on the wall (with wall offset) of the geode bounding box for a position in a direction.
+     * Gets the position on the wall (with wall offset) of the geode bounding box for a position in a direction.
      * @param blockPos The block position.
      * @param direction The direction.
      * @return The position on the wall (with wall offset).
@@ -572,6 +630,17 @@ public class GeodesyCore {
         };
     }
 
+    //TODO I'm confused, someone else document this please
+    /**
+     * Builds the flying machine.
+     * @param blockerPos the position of the blocker block.
+     * @param pos the position of the flying machine.
+     * @param directionAlong
+     * @param directionUp
+     * @param stickyBlock the sticky block to use.
+     * @param oppositeWallPos the position of the opposite wall.
+     * @return
+     */
     private BlockPos buildMachine(BlockPos blockerPos, BlockPos pos, Direction directionAlong, Direction directionUp, Block stickyBlock, BlockPos oppositeWallPos) {
         /*
          * It looks like this:
@@ -631,6 +700,13 @@ public class GeodesyCore {
         return pos.offset(directionUp, 1);
     }
 
+    /**
+     * Builds the clock for the farm.
+     * @param startPos the position of the clock.
+     * @param directionMain the direction of the main axis of the clock.
+     * @param directionSide the direction of the side axis of the clock.
+     * @return the torch position of the clock
+     */
     private BlockPos buildClock(BlockPos startPos, Direction directionMain, Direction directionSide) {
         // Platform
         for (int i=0; i<6; i++)
@@ -714,18 +790,21 @@ public class GeodesyCore {
         return torchPos;
     }
 
-    /*
+    /**
      * A little kludge to avoid having to pass the "player" around all the time;
      * instead we rely on the caller setting it before calling methods on us.
      * We use a weak reference, so we don't keep the player around (we don't own it).
      */
-
     private WeakReference<ServerPlayerEntity> player;
 
     public void setPlayerEntity(ServerPlayerEntity player) {
         this.player = new WeakReference<>(player);
     }
 
+    /**
+     * Sends command feedback to the player, which should appear in the player's chat.
+     * @param message the text to send.
+     */
     private void sendCommandFeedback(Text message) {
         ServerPlayerEntity serverPlayerEntity = player.get();
         if (serverPlayerEntity == null) {
@@ -735,6 +814,12 @@ public class GeodesyCore {
         serverPlayerEntity.sendMessage(message);
     }
 
+    /**
+     * Sends command feedback with formatting.
+     * @param format the string to send.
+     * @param args the arguments for the string
+     * @see #sendCommandFeedback(Text)
+     */
     private void sendCommandFeedback(String format, Object... args) {
         sendCommandFeedback(Text.of(String.format(format, args)));
     }
