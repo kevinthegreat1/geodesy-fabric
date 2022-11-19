@@ -81,8 +81,7 @@ public class GeodesyCore {
      */
     private void fillHotbar() {
         ServerPlayerEntity player = this.player.get();
-        if (player == null)
-            return;
+        if (player == null) return;
         player.getInventory().setStack(0, UnholyBookOfGeodesy.summonKrivbeknih());
         player.getInventory().setStack(1, Items.SLIME_BLOCK.getDefaultStack());
         player.getInventory().setStack(2, Items.HONEY_BLOCK.getDefaultStack());
@@ -98,9 +97,10 @@ public class GeodesyCore {
      * Selects an area for the mod to work on.
      * Detects geodes in the area, clears the work area, and
      * record the budding and cluster blocks.
-     * @param world the world
+     *
+     * @param world    the world
      * @param startPos the start position
-     * @param endPos the end position
+     * @param endPos   the end position
      */
     void geodesyArea(World world, BlockPos startPos, BlockPos endPos) {
         sendCommandFeedback("---");
@@ -123,6 +123,7 @@ public class GeodesyCore {
      * Budding blocks mean that the block should not have a flying machine, signified with a crying obsidian block on the wall.
      * Cluster blocks mean that the block should be harvested with a flying machine, signified with a pumpkin block on the wall.
      * Finally, calculates the efficiencies of the directions.
+     *
      * @param directions the directions to project, in order
      * @implNote Currently, the harvest-bility of the projected areas are not checked.
      * Some areas such as 1x1 holes may be unable to be harvested.
@@ -146,12 +147,11 @@ public class GeodesyCore {
 
         // Do nothing more if we have no directions - this signifies we just want
         // to draw the frame and do nothing else.
-        if (directions == null)
-            return;
+        if (directions == null) return;
 
 
         // Run the projection.
-        for (Direction direction: directions) {
+        for (Direction direction : directions) {
             this.projectGeode(direction);
         }
 
@@ -162,9 +162,12 @@ public class GeodesyCore {
             if (world.getBlockState(blockPosDirectionPair.getLeft()).getBlock() == Blocks.AMETHYST_CLUSTER) {
                 clustersLeft.getAndIncrement();
                 world.setBlockState(blockPosDirectionPair.getLeft(), switch (blockPosDirectionPair.getRight()) {
-                    case DOWN -> Blocks.SPRUCE_BUTTON.getDefaultState().with(Properties.WALL_MOUNT_LOCATION, WallMountLocation.CEILING);
-                    case UP -> Blocks.SPRUCE_BUTTON.getDefaultState().with(Properties.WALL_MOUNT_LOCATION, WallMountLocation.FLOOR);
-                    default -> Blocks.SPRUCE_BUTTON.getDefaultState().with(Properties.HORIZONTAL_FACING, blockPosDirectionPair.getRight());
+                    case DOWN ->
+                            Blocks.SPRUCE_BUTTON.getDefaultState().with(Properties.WALL_MOUNT_LOCATION, WallMountLocation.CEILING);
+                    case UP ->
+                            Blocks.SPRUCE_BUTTON.getDefaultState().with(Properties.WALL_MOUNT_LOCATION, WallMountLocation.FLOOR);
+                    default ->
+                            Blocks.SPRUCE_BUTTON.getDefaultState().with(Properties.HORIZONTAL_FACING, blockPosDirectionPair.getRight());
                 }, NOTIFY_LISTENERS);
             }
         });
@@ -220,11 +223,11 @@ public class GeodesyCore {
         }
 
         // Plop the clock at the top
-        BlockPos clockPos = new BlockPos((geode.getMinX()+geode.getMaxX())/2+3, geode.getMaxY()+CLOCK_Y_OFFSET, (geode.getMinZ()+geode.getMaxZ())/2+1);
+        BlockPos clockPos = new BlockPos((geode.getMinX() + geode.getMaxX()) / 2 + 3, geode.getMaxY() + CLOCK_Y_OFFSET, (geode.getMinZ() + geode.getMaxZ()) / 2 + 1);
         BlockPos torchPos = buildClock(clockPos, Direction.WEST, Direction.NORTH);
 
         // Run along all the axes and move all slime/honey blocks inside the frame.
-        for (Direction direction: Direction.values()) {
+        for (Direction direction : Direction.values()) {
             geode.slice(direction.getAxis(), slice -> {
                 // Calculate positions of the source and target blocks for moving.
                 BlockPos targetPos = slice.getEndpoint(direction).offset(direction, WALL_OFFSET);
@@ -239,14 +242,13 @@ public class GeodesyCore {
         }
 
         // Check each slice for a marker block.
-        for (Direction slicingDirection: Direction.values()) {
+        for (Direction slicingDirection : Direction.values()) {
             List<BlockPos> triggerObserverPositions = new ArrayList<>();
             geode.slice(slicingDirection.getAxis(), slice -> {
                 // Check for blocker marker block.
                 BlockPos blockerPos = slice.getEndpoint(slicingDirection).offset(slicingDirection, WALL_OFFSET + 2);
                 BlockPos oppositeWallPos = slice.getEndpoint(slicingDirection.getOpposite()).offset(slicingDirection, -WALL_OFFSET);
-                if (!MARKERS_BLOCKER.contains(world.getBlockState(blockerPos).getBlock()))
-                    return;
+                if (!MARKERS_BLOCKER.contains(world.getBlockState(blockerPos).getBlock())) return;
                 // Find the position of the first machine block.
                 BlockPos firstMachinePos = null;
                 for (Direction direction : Direction.values()) {
@@ -255,28 +257,22 @@ public class GeodesyCore {
                         break;
                     }
                 }
-                if (firstMachinePos == null)
-                    return;
+                if (firstMachinePos == null) return;
                 // First the direction of the second (and third) machine block.
                 Direction machineDirection = null;
                 for (Direction direction : Direction.values()) {
-                    if (MARKERS_MACHINE.contains(world.getBlockState(firstMachinePos.offset(direction, 1)).getBlock()) &&
-                            MARKERS_MACHINE.contains(world.getBlockState(firstMachinePos.offset(direction, 2)).getBlock())) {
+                    if (MARKERS_MACHINE.contains(world.getBlockState(firstMachinePos.offset(direction, 1)).getBlock()) && MARKERS_MACHINE.contains(world.getBlockState(firstMachinePos.offset(direction, 2)).getBlock())) {
                         machineDirection = direction;
                         break;
                     }
                 }
-                if (machineDirection == null)
-                    return;
+                if (machineDirection == null) return;
                 // Read the sticky block at machine position (we need its opposite).
                 BlockPos stickyPos = slice.getEndpoint(slicingDirection).offset(slicingDirection, WALL_OFFSET);
                 Block stickyBlock = world.getBlockState(stickyPos).getBlock();
-                if (stickyBlock == Blocks.SLIME_BLOCK)
-                    stickyBlock = Blocks.HONEY_BLOCK;
-                else if (stickyBlock == Blocks.HONEY_BLOCK)
-                    stickyBlock = Blocks.SLIME_BLOCK;
-                else
-                    return;
+                if (stickyBlock == Blocks.SLIME_BLOCK) stickyBlock = Blocks.HONEY_BLOCK;
+                else if (stickyBlock == Blocks.HONEY_BLOCK) stickyBlock = Blocks.SLIME_BLOCK;
+                else return;
                 // Important: the actual machine is built one block closer to the geode
                 // than the player-placed markers are. Also wipe out the blocker marker because
                 // it doesn't get removed otherwise.
@@ -289,8 +285,7 @@ public class GeodesyCore {
             });
 
             // Do nothing for this direction if there's no machines - the wiring logic would fail.
-            if (triggerObserverPositions.isEmpty())
-                continue;
+            if (triggerObserverPositions.isEmpty()) continue;
 
             // Run the wiring building logic.
             if (slicingDirection == Direction.UP) {
@@ -312,31 +307,25 @@ public class GeodesyCore {
 
     private void buildTriggerWiringHorizontal(List<BlockPos> observerPositions, Direction slicingDirection) {
         // Skip the wiring if there are no observers.
-        if (observerPositions.isEmpty())
-            return;
+        if (observerPositions.isEmpty()) return;
 
         // Calculate the volume containing the trigger observers.
         BlockBox observersVolume = BlockBox.encompassPositions(observerPositions).orElseThrow();
 
         // Calculate the lower edge of the trigger volume (shaped 1x1xN blocks).
-        IterableBlockBox triggerVolumeLowerEdge = new IterableBlockBox(
-                observersVolume.getMinX(), observersVolume.getMinY(), observersVolume.getMinZ(),
-                observersVolume.getMaxX(), observersVolume.getMinY(), observersVolume.getMaxZ());
+        IterableBlockBox triggerVolumeLowerEdge = new IterableBlockBox(observersVolume.getMinX(), observersVolume.getMinY(), observersVolume.getMinZ(), observersVolume.getMaxX(), observersVolume.getMinY(), observersVolume.getMaxZ());
 
         // Build the trigger wiring along the lower edge.
         triggerVolumeLowerEdge.forEachPosition(triggerPos -> {
             // Calculate the 1x1 vertical box that encompasses all the possible observer positions in the current slice.
-            IterableBlockBox observersBox = new IterableBlockBox(
-                triggerPos.getX(), observersVolume.getMinY(), triggerPos.getZ(),
-                triggerPos.getX(), observersVolume.getMaxY(), triggerPos.getZ());
+            IterableBlockBox observersBox = new IterableBlockBox(triggerPos.getX(), observersVolume.getMinY(), triggerPos.getZ(), triggerPos.getX(), observersVolume.getMaxY(), triggerPos.getZ());
 
             // Create a list of all needed scaffolding positions in this slice.
             List<BlockPos> scaffoldingPositions = observerPositions.stream()
                     // Extract all the observers belonging to the current slice
-                    .filter(blockPos -> observersBox.contains(blockPos))
+                    .filter(observersBox::contains)
                     // Offset them all one block out, to become needed scaffolding positions
-                    .map(blockPos -> blockPos.offset(slicingDirection))
-                    .collect(Collectors.toList());
+                    .map(blockPos -> blockPos.offset(slicingDirection)).collect(Collectors.toList());
             if (!scaffoldingPositions.isEmpty()) {
                 // Add the bottom scaffolding, which is always needed no matter what.
                 scaffoldingPositions.add(triggerPos.offset(slicingDirection));
@@ -397,18 +386,14 @@ public class GeodesyCore {
 
         // The Z lines are per-observer.
         observerPositions.forEach(blockPos -> {
-            lines.add(new IterableBlockBox(
-                blockPos.getX(), blockPos.getY(), blockPos.getZ(),
-                blockPos.getX(), blockPos.getY(), torchPos.getZ()));
+            lines.add(new IterableBlockBox(blockPos.getX(), blockPos.getY(), blockPos.getZ(), blockPos.getX(), blockPos.getY(), torchPos.getZ()));
         });
 
         // The X axis line needs to connect to the trigger position area - add it.
         // It's okay to modify it here, as no other code uses it.
         observerPositions.add(torchPos.offset(Direction.DOWN, 2));
         IterableBlockBox xLineArea = new IterableBlockBox(BlockBox.encompassPositions(observerPositions).orElseThrow());
-        IterableBlockBox xLine = new IterableBlockBox(
-            xLineArea.getMinX(), xLineArea.getMinY(), torchPos.getZ(),
-            xLineArea.getMaxX(), xLineArea.getMinY(), torchPos.getZ());
+        IterableBlockBox xLine = new IterableBlockBox(xLineArea.getMinX(), xLineArea.getMinY(), torchPos.getZ(), xLineArea.getMaxX(), xLineArea.getMinY(), torchPos.getZ());
         lines.add(xLine);
 
         // Create all the lines with redstone dust on top.
@@ -425,12 +410,10 @@ public class GeodesyCore {
     }
 
     private void buildWalls(IterableBlockBox wallsBox) {
-        for (Direction slicingDirection: Direction.values()) {
+        for (Direction slicingDirection : Direction.values()) {
             // Top wall (lid) is transparent, but we still run the processing
             // to remove all blocks that should be removed.
-            BlockState wallBlock = (slicingDirection == Direction.UP) ?
-                    Blocks.AIR.getDefaultState() :
-                    Blocks.MOSS_BLOCK.getDefaultState();
+            BlockState wallBlock = (slicingDirection == Direction.UP) ? Blocks.AIR.getDefaultState() : Blocks.MOSS_BLOCK.getDefaultState();
             wallsBox.slice(slicingDirection.getAxis(), iterableBlockBox -> {
                 BlockPos end = iterableBlockBox.getEndpoint(slicingDirection);
                 if (!PRESERVE_WALL_BLOCKS.contains(world.getBlockState(end).getBlock()))
@@ -443,6 +426,7 @@ public class GeodesyCore {
      * Clears the geode work area.
      * Places walls around the border of the work area to prevent outside fluids and falling blocks.
      * Adds a command block to executre the {@link #geodesyArea(World, BlockPos, BlockPos) area command} for this area again.
+     *
      * @param force force run this method again, even if it has already been run.
      */
     private void prepareWorkArea(boolean force) {
@@ -451,8 +435,7 @@ public class GeodesyCore {
 
         // Check for existing command block, bail out if found.
         if (!force) {
-            if (world.getBlockState(commandBlockPos).getBlock() == Blocks.COMMAND_BLOCK)
-                return;
+            if (world.getBlockState(commandBlockPos).getBlock() == Blocks.COMMAND_BLOCK) return;
         }
 
         // Wipe out the area (except stuff we preserve)
@@ -468,8 +451,7 @@ public class GeodesyCore {
         });
 
         // Add a command block to allow the player to re-execute the command easily.
-        String resumeCommand = String.format("/geodesy area %d %d %d %d %d %d",
-                geode.getMinX(), geode.getMinY(), geode.getMinZ(), geode.getMaxX(), geode.getMaxY(), geode.getMaxZ());
+        String resumeCommand = String.format("/geodesy area %d %d %d %d %d %d", geode.getMinX(), geode.getMinY(), geode.getMinZ(), geode.getMaxX(), geode.getMaxY(), geode.getMaxZ());
 
         world.setBlockState(commandBlockPos, Blocks.COMMAND_BLOCK.getDefaultState(), NOTIFY_LISTENERS);
         CommandBlockBlockEntity commandBlock = (CommandBlockBlockEntity) world.getBlockEntity(commandBlockPos);
@@ -485,19 +467,13 @@ public class GeodesyCore {
      * Detects geodes in the supplied area.
      * Sets {@link #geode}, {@link #buddingAmethystPositions}, and {@link #amethystClusterPositions}.
      * Also clears the above fields if no geode is found.
+     *
      * @param pos1 one corner of the area
      * @param pos2 the other corner of the area
      */
     private void detectGeode(BlockPos pos1, BlockPos pos2) {
         // Calculate the correct min/max coordinates and construct a box.
-        IterableBlockBox scanBox = new IterableBlockBox(new BlockBox(
-                Math.min(pos1.getX(), pos2.getX()),
-                Math.min(pos1.getY(), pos2.getY()),
-                Math.min(pos1.getZ(), pos2.getZ()),
-                Math.max(pos1.getX(), pos2.getX()),
-                Math.max(pos1.getY(), pos2.getY()),
-                Math.max(pos1.getZ(), pos2.getZ())
-        ));
+        IterableBlockBox scanBox = new IterableBlockBox(new BlockBox(Math.min(pos1.getX(), pos2.getX()), Math.min(pos1.getY(), pos2.getY()), Math.min(pos1.getZ(), pos2.getZ()), Math.max(pos1.getX(), pos2.getX()), Math.max(pos1.getY(), pos2.getY()), Math.max(pos1.getZ(), pos2.getZ())));
 
         // Scan the box, marking any positions with budding amethyst, and
         // calculate the minimum bounding box that contains these positions.
@@ -538,8 +514,8 @@ public class GeodesyCore {
      */
     private void highlightGeode() {
         // Highlight the geode area.
-        int commandBlockOffset = WALL_OFFSET+1;
-        BlockPos structureBlockPos = new BlockPos(geode.getMinX()-commandBlockOffset, geode.getMinY()-commandBlockOffset, geode.getMinZ()-commandBlockOffset);
+        int commandBlockOffset = WALL_OFFSET + 1;
+        BlockPos structureBlockPos = new BlockPos(geode.getMinX() - commandBlockOffset, geode.getMinY() - commandBlockOffset, geode.getMinZ() - commandBlockOffset);
         BlockState structureBlockState = Blocks.STRUCTURE_BLOCK.getDefaultState().with(StructureBlock.MODE, StructureBlockMode.SAVE);
         world.setBlockState(structureBlockPos, structureBlockState, NOTIFY_LISTENERS);
         StructureBlockBlockEntity structure = (StructureBlockBlockEntity) world.getBlockEntity(structureBlockPos);
@@ -585,6 +561,7 @@ public class GeodesyCore {
      * Projects the geode to a plane in a direction.
      * Slices with budding amethyst(s) are marked with crying obsidian.
      * Slices with amethyst cluster(s) that needs to be harvested are marked with pumpkin.
+     *
      * @param direction The direction to project the geode to.
      * @author Kosma Moczek, Kevinthegreat
      */
@@ -614,7 +591,8 @@ public class GeodesyCore {
 
     /**
      * Gets the position on the wall (with wall offset) of the geode bounding box for a position in a direction.
-     * @param blockPos The block position.
+     *
+     * @param blockPos  The block position.
      * @param direction The direction.
      * @return The position on the wall (with wall offset).
      * @author Kevinthegreat
@@ -631,15 +609,17 @@ public class GeodesyCore {
     }
 
     //TODO I'm confused, someone else document this please
+
     /**
      * Builds the flying machine.
-     * @param blockerPos the position of the blocker block.
-     * @param pos the position of the flying machine.
+     *
+     * @param blockerPos      the position of the blocker block
+     * @param pos             the position of the flying machine
      * @param directionAlong
      * @param directionUp
-     * @param stickyBlock the sticky block to use.
-     * @param oppositeWallPos the position of the opposite wall.
-     * @return
+     * @param stickyBlock     the sticky block to use
+     * @param oppositeWallPos the position of the opposite wall
+     * @return the position of the observer that can trigger the machine
      */
     private BlockPos buildMachine(BlockPos blockerPos, BlockPos pos, Direction directionAlong, Direction directionUp, Block stickyBlock, BlockPos oppositeWallPos) {
         /*
@@ -702,15 +682,16 @@ public class GeodesyCore {
 
     /**
      * Builds the clock for the farm.
-     * @param startPos the position of the clock.
+     *
+     * @param startPos      the position of the clock.
      * @param directionMain the direction of the main axis of the clock.
      * @param directionSide the direction of the side axis of the clock.
      * @return the torch position of the clock
      */
     private BlockPos buildClock(BlockPos startPos, Direction directionMain, Direction directionSide) {
         // Platform
-        for (int i=0; i<6; i++)
-            for (int j=0; j<3; j++)
+        for (int i = 0; i < 6; i++)
+            for (int j = 0; j < 3; j++)
                 world.setBlockState(startPos.offset(directionMain, i).offset(directionSide, j), FULL_BLOCK.getDefaultState());
 
         // Four solid blocks
@@ -723,11 +704,7 @@ public class GeodesyCore {
         world.setBlockState(startPos.offset(directionMain, -1).offset(directionSide, 2).offset(Direction.UP, 1), Blocks.LEVER.getDefaultState().with(Properties.HORIZONTAL_FACING, directionMain.getOpposite()).with(Properties.POWERED, true));
 
         // Four redstone dusts
-        BlockState redstoneDustPlus = Blocks.REDSTONE_WIRE.getDefaultState()
-                .with(Properties.EAST_WIRE_CONNECTION, WireConnection.SIDE)
-                .with(Properties.WEST_WIRE_CONNECTION, WireConnection.SIDE)
-                .with(Properties.NORTH_WIRE_CONNECTION, WireConnection.SIDE)
-                .with(Properties.SOUTH_WIRE_CONNECTION, WireConnection.SIDE);
+        BlockState redstoneDustPlus = Blocks.REDSTONE_WIRE.getDefaultState().with(Properties.EAST_WIRE_CONNECTION, WireConnection.SIDE).with(Properties.WEST_WIRE_CONNECTION, WireConnection.SIDE).with(Properties.NORTH_WIRE_CONNECTION, WireConnection.SIDE).with(Properties.SOUTH_WIRE_CONNECTION, WireConnection.SIDE);
         world.setBlockState(startPos.offset(directionMain, 0).offset(directionSide, 0).offset(Direction.UP, 1), redstoneDustPlus.with(Properties.POWER, 2));
         world.setBlockState(startPos.offset(directionMain, 0).offset(directionSide, 2).offset(Direction.UP, 2), redstoneDustPlus);
         world.setBlockState(startPos.offset(directionMain, 5).offset(directionSide, 0).offset(Direction.UP, 1), redstoneDustPlus);
@@ -803,6 +780,7 @@ public class GeodesyCore {
 
     /**
      * Sends command feedback to the player, which should appear in the player's chat.
+     *
      * @param message the text to send.
      */
     private void sendCommandFeedback(Text message) {
@@ -816,8 +794,9 @@ public class GeodesyCore {
 
     /**
      * Sends command feedback with formatting.
+     *
      * @param format the string to send.
-     * @param args the arguments for the string
+     * @param args   the arguments for the string
      * @see #sendCommandFeedback(Text)
      */
     private void sendCommandFeedback(String format, Object... args) {
