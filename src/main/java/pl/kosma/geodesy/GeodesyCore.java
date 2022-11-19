@@ -25,10 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -362,16 +359,12 @@ public class GeodesyCore {
                 world.setBlockState(triggerPos.offset(slicingDirection, 2).offset(Direction.UP, -1), Blocks.TARGET.getDefaultState(), NOTIFY_LISTENERS);
                 world.setBlockState(triggerPos.offset(slicingDirection, 2).offset(Direction.UP, 0), Blocks.SCAFFOLDING.getDefaultState().with(ScaffoldingBlock.DISTANCE, 0), NOTIFY_LISTENERS);
                 IterableBlockBox scaffoldingBox = new IterableBlockBox(BlockBox.encompassPositions(scaffoldingPositions).orElseThrow());
-                scaffoldingBox.forEachPosition(scaffoldingPos -> {
-                    world.setBlockState(scaffoldingPos, Blocks.SCAFFOLDING.getDefaultState().with(ScaffoldingBlock.DISTANCE, 0), NOTIFY_LISTENERS);
-                });
+                scaffoldingBox.forEachPosition(scaffoldingPos -> world.setBlockState(scaffoldingPos, Blocks.SCAFFOLDING.getDefaultState().with(ScaffoldingBlock.DISTANCE, 0), NOTIFY_LISTENERS));
             }
         });
 
         // Place all the observers last, so they don't trigger.
-        observerPositions.forEach(observerPos -> {
-            world.setBlockState(observerPos, Blocks.OBSERVER.getDefaultState().with(Properties.FACING, slicingDirection), NOTIFY_LISTENERS);
-        });
+        observerPositions.forEach(observerPos -> world.setBlockState(observerPos, Blocks.OBSERVER.getDefaultState().with(Properties.FACING, slicingDirection), NOTIFY_LISTENERS));
     }
 
     private void buildTriggerWiringUp(List<BlockPos> observerPositions, BlockPos torchPos) {
@@ -385,9 +378,7 @@ public class GeodesyCore {
         List<IterableBlockBox> lines = new ArrayList<>();
 
         // The Z lines are per-observer.
-        observerPositions.forEach(blockPos -> {
-            lines.add(new IterableBlockBox(blockPos.getX(), blockPos.getY(), blockPos.getZ(), blockPos.getX(), blockPos.getY(), torchPos.getZ()));
-        });
+        observerPositions.forEach(blockPos -> lines.add(new IterableBlockBox(blockPos.getX(), blockPos.getY(), blockPos.getZ(), blockPos.getX(), blockPos.getY(), torchPos.getZ())));
 
         // The X axis line needs to connect to the trigger position area - add it.
         // It's okay to modify it here, as no other code uses it.
@@ -397,16 +388,14 @@ public class GeodesyCore {
         lines.add(xLine);
 
         // Create all the lines with redstone dust on top.
-        lines.forEach(blockBox -> {
-            blockBox.forEachPosition(blockPos -> {
-                // Place a solid block if it's not already there.
-                if (world.getBlockState(blockPos).getBlock() == Blocks.AIR)
-                    world.setBlockState(blockPos, FULL_BLOCK.getDefaultState());
-                // Place redstone dust on top if it's not already there.
-                if (world.getBlockState(blockPos.offset(Direction.UP)).getBlock() == Blocks.AIR)
-                    world.setBlockState(blockPos.offset(Direction.UP), Blocks.REDSTONE_WIRE.getDefaultState());
-            });
-        });
+        lines.forEach(blockBox -> blockBox.forEachPosition(blockPos -> {
+            // Place a solid block if it's not already there.
+            if (world.getBlockState(blockPos).getBlock() == Blocks.AIR)
+                world.setBlockState(blockPos, FULL_BLOCK.getDefaultState());
+            // Place redstone dust on top if it's not already there.
+            if (world.getBlockState(blockPos.offset(Direction.UP)).getBlock() == Blocks.AIR)
+                world.setBlockState(blockPos.offset(Direction.UP), Blocks.REDSTONE_WIRE.getDefaultState());
+        }));
     }
 
     private void buildWalls(IterableBlockBox wallsBox) {
@@ -430,6 +419,7 @@ public class GeodesyCore {
      * @param force force run this method again, even if it has already been run.
      */
     private void prepareWorkArea(boolean force) {
+        Objects.requireNonNull(geode, "Geode is null. This should never happen????");
         IterableBlockBox workBoundingBox = new IterableBlockBox(geode.expand(BUILD_MARGIN));
         BlockPos commandBlockPos = new BlockPos(workBoundingBox.getMaxX(), workBoundingBox.getMaxY(), workBoundingBox.getMaxZ());
 
@@ -446,9 +436,7 @@ public class GeodesyCore {
 
         // Place walls inside to prevent water and falling blocks from going bonkers.
         IterableBlockBox wallsBoundingBox = new IterableBlockBox(workBoundingBox.expand(1));
-        wallsBoundingBox.forEachWallPosition(blockPos -> {
-            world.setBlockState(blockPos, WORK_AREA_WALL.getDefaultState(), NOTIFY_LISTENERS);
-        });
+        wallsBoundingBox.forEachWallPosition(blockPos -> world.setBlockState(blockPos, WORK_AREA_WALL.getDefaultState(), NOTIFY_LISTENERS));
 
         // Add a command block to allow the player to re-execute the command easily.
         String resumeCommand = String.format("/geodesy area %d %d %d %d %d %d", geode.getMinX(), geode.getMinY(), geode.getMinZ(), geode.getMaxX(), geode.getMaxY(), geode.getMaxZ());
@@ -513,6 +501,7 @@ public class GeodesyCore {
      * Highlights the geode area.
      */
     private void highlightGeode() {
+        Objects.requireNonNull(geode, "Geode is null. This should never happen????");
         // Highlight the geode area.
         int commandBlockOffset = WALL_OFFSET + 1;
         BlockPos structureBlockPos = new BlockPos(geode.getMinX() - commandBlockOffset, geode.getMinY() - commandBlockOffset, geode.getMinZ() - commandBlockOffset);
@@ -534,6 +523,7 @@ public class GeodesyCore {
      * Counts all possible clusters from each budding block in {@link #buddingAmethystPositions}.
      */
     private void countClusters() {
+        Objects.requireNonNull(buddingAmethystPositions, "Budding Amethyst List is null. This should never happen????");
         amethystClusterPositions = new ArrayList<>();
         buddingAmethystPositions.forEach(blockPos -> {
             for (Direction direction : Direction.values()) {
@@ -550,6 +540,7 @@ public class GeodesyCore {
      * Basically grows all the clusters.
      */
     private void growClusters() {
+        Objects.requireNonNull(amethystClusterPositions, "Amethyst Cluster List is null. This should never happen????");
         amethystClusterPositions.forEach(blockPosDirectionPair -> {
             if (world.getBlockState(blockPosDirectionPair.getLeft()).getBlock() == Blocks.AIR) {
                 world.setBlockState(blockPosDirectionPair.getLeft(), Blocks.AMETHYST_CLUSTER.getDefaultState().with(AmethystClusterBlock.FACING, blockPosDirectionPair.getRight()));
@@ -566,6 +557,8 @@ public class GeodesyCore {
      * @author Kosma Moczek, Kevinthegreat
      */
     private void projectGeode(Direction direction) {
+        Objects.requireNonNull(buddingAmethystPositions, "Budding Amethyst List is null. This should never happen????");
+        Objects.requireNonNull(amethystClusterPositions, "Amethyst Cluster List is null. This should never happen????");
         // Mark wall for slices with budding amethysts.
         buddingAmethystPositions.forEach(blockPos -> {
             BlockPos wallPos = getWallPos(blockPos, direction);
@@ -580,9 +573,7 @@ public class GeodesyCore {
                 // Check if the slice is marked with budding amethyst.
                 if (world.getBlockState(wallPos).getBlock() != Blocks.CRYING_OBSIDIAN) {
                     // Mark all clusters in the slice as harvested.
-                    BlockPos.iterate(wallPos, oppositeWallPos).forEach(pos -> {
-                        world.setBlockState(pos, Blocks.AIR.getDefaultState(), NOTIFY_LISTENERS);
-                    });
+                    BlockPos.iterate(wallPos, oppositeWallPos).forEach(pos -> world.setBlockState(pos, Blocks.AIR.getDefaultState(), NOTIFY_LISTENERS));
                     world.setBlockState(wallPos, Blocks.PUMPKIN.getDefaultState(), NOTIFY_LISTENERS);
                 }
             }
@@ -598,6 +589,7 @@ public class GeodesyCore {
      * @author Kevinthegreat
      */
     private BlockPos getWallPos(BlockPos blockPos, Direction direction) {
+        Objects.requireNonNull(geode, "Geode is null. This should never happen????");
         return switch (direction) {
             case NORTH -> new BlockPos(geode.getMinX(), blockPos.getY(), blockPos.getZ() - WALL_OFFSET);
             case SOUTH -> new BlockPos(geode.getMaxX(), blockPos.getY(), blockPos.getZ() + WALL_OFFSET);
