@@ -436,7 +436,11 @@ public class GeodesyCore {
 
         // Place walls inside to prevent water and falling blocks from going bonkers.
         IterableBlockBox wallsBoundingBox = new IterableBlockBox(workBoundingBox.expand(1));
-        wallsBoundingBox.forEachWallPosition(blockPos -> world.setBlockState(blockPos, WORK_AREA_WALL.getDefaultState(), NOTIFY_LISTENERS));
+        wallsBoundingBox.forEachWallPosition(blockPos -> {
+            if (!PRESERVE_BLOCKS.contains(world.getBlockState(blockPos).getBlock())) {
+                world.setBlockState(blockPos, WORK_AREA_WALL.getDefaultState(), NOTIFY_LISTENERS);
+            }
+        });
 
         // Add a command block to allow the player to re-execute the command easily.
         String resumeCommand = String.format("/geodesy area %d %d %d %d %d %d", geode.getMinX(), geode.getMinY(), geode.getMinZ(), geode.getMaxX(), geode.getMaxY(), geode.getMaxZ());
@@ -591,12 +595,12 @@ public class GeodesyCore {
     private BlockPos getWallPos(BlockPos blockPos, Direction direction) {
         Objects.requireNonNull(geode, "Geode is null. This should never happen????");
         return switch (direction) {
-            case NORTH -> new BlockPos(geode.getMinX(), blockPos.getY(), blockPos.getZ() - WALL_OFFSET);
-            case SOUTH -> new BlockPos(geode.getMaxX(), blockPos.getY(), blockPos.getZ() + WALL_OFFSET);
-            case EAST -> new BlockPos(blockPos.getX() + WALL_OFFSET, blockPos.getY(), geode.getMaxZ());
-            case WEST -> new BlockPos(blockPos.getX() - WALL_OFFSET, blockPos.getY(), geode.getMinZ());
+            case EAST -> new BlockPos(geode.getMaxX() + WALL_OFFSET, blockPos.getY(), blockPos.getZ());
+            case WEST -> new BlockPos(geode.getMinX() - WALL_OFFSET, blockPos.getY(), blockPos.getZ());
             case UP -> new BlockPos(blockPos.getX(), geode.getMaxY() + WALL_OFFSET, blockPos.getZ());
             case DOWN -> new BlockPos(blockPos.getX(), geode.getMinY() - WALL_OFFSET, blockPos.getZ());
+            case SOUTH -> new BlockPos(blockPos.getX(), blockPos.getY(), geode.getMaxZ() + WALL_OFFSET);
+            case NORTH -> new BlockPos(blockPos.getX(), blockPos.getY(), geode.getMinZ() - WALL_OFFSET);
         };
     }
 
